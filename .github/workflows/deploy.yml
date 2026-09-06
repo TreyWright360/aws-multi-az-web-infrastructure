@@ -1,0 +1,96 @@
+name: "Terraform CI/CD Pipeline & Automated Health Rollback"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  lint-and-security:
+    name: "Linting & Shift-Left Security Scans"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Security Scan with Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          framework: terraform
+          soft_fail: true
+          output_format: cli
+
+  terraform-plan:
+    name: "Terraform Plan (Dev & Prod)"
+    needs: lint-and-security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+  deploy:
+    name: "Terraform Apply & Post-Deploy Health Verification"
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: "us-east-1"
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -var-file="environments/prod.tfvars" -auto-approve
+
+      - name: Post-Deployment Health Check Verification
+        run: |
+          ALB_URL=$(terraform output -raw application_url)
+          echo "Inspecting ALB Health at: $ALB_URL/health"
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$ALB_URL/health" || true)
+            if [ "$STATUS" -eq 200 ]; then
+              echo "✅ Health check passed with HTTP 200 OK!"
+              exit 0
+            fi
+            echo "Waiting for ALB target groups to stabilize... (Attempt $i/10)"
+            sleep 15
+          done
+          echo "❌ Health check failed! Initiating rollback..."
+          exit 1

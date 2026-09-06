@@ -1,0 +1,19 @@
+# Local .terraform directories
+.terraform/
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars.json
+*.tfplan
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Sensitive credentials
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.env
+.DS_Store

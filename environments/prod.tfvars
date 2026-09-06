@@ -1,0 +1,13 @@
+aws_region           = "us-east-1"
+project_name         = "multi-az-web-stack"
+environment          = "prod"
+vpc_cidr             = "10.0.0.0/16"
+availability_zones   = ["us-east-1a", "us-east-1b"]
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.10.0/24", "10.0.20.0/24"]
+instance_type        = "t3.small"
+asg_min_size         = 2
+asg_max_size         = 6
+asg_desired_capacity = 2
+db_instance_class    = "db.t3.small"
+multi_az_db          = true
