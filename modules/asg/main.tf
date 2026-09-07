@@ -80,14 +80,14 @@ resource "aws_launch_template" "app" {
 }
 
 resource "aws_autoscaling_group" "app" {
-  name_prefix         = "${var.project_name}-${var.environment}-asg-"
-  vpc_zone_identifier = var.private_subnet_ids
-  target_group_arns   = [var.target_group_arn]
-  health_check_type   = "ELB"
+  name_prefix               = "${var.project_name}-${var.environment}-asg-"
+  vpc_zone_identifier       = var.private_subnet_ids
+  target_group_arns         = [var.target_group_arn]
+  health_check_type         = "ELB"
   health_check_grace_period = 300
 
-  min_size     = var.asg_min_size
-  max_size     = var.asg_max_size
+  min_size         = var.asg_min_size
+  max_size         = var.asg_max_size
   desired_capacity = var.asg_desired_capacity
 
   launch_template {
