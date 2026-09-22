@@ -32,3 +32,11 @@ Application and database instances are in private subnets; security groups limit
 ## Production improvements
 
 Add HTTPS and certificate management, ALB logs and 504 alarms, an application path that exercises RDS, tested deployment rollback, protected state storage, and a recovery design for NAT and database dependencies. Measure availability and cost rather than treating targets as achieved results.
+
+## CI/CD and deployment validation
+
+- **CI status:** Verified passing without AWS credentials or terraform apply on PR and main push.
+- **PR validation run:** [Run #35785654408](https://github.com/TreyWright360/aws-multi-az-web-infrastructure/actions/runs/35785654408) (passed)
+- **Main branch validation run:** [Run #35786494558](https://github.com/TreyWright360/aws-multi-az-web-infrastructure/actions/runs/35786494558) (passed, non-deploying)
+- **Deployment safeguards:** Automatic deployment is removed from push to `main`. Deployment is isolated in `.github/workflows/deploy-production.yml`, requiring manual `workflow_dispatch` trigger and approval via the protected `production` environment. The false health-check rollback claim was removed.
+
