@@ -3,17 +3,16 @@
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
-![Status](https://img.shields.io/badge/Uptime-99.9%25-brightgreen?style=for-the-badge)
+![Evidence](https://img.shields.io/badge/Incident%20Labs-Documentation%20Only-yellow?style=for-the-badge)
+
+> **Portfolio evidence status:** Infrastructure code is published. No dated AWS failure-test results, uptime measurements, cost comparison, or deployment-duration measurements are checked into this repository yet. See the [AWS Cloud Operations Handbook](https://github.com/TreyWright360/aws-cloud-operations-handbook) for runbooks and the [ALB 504 lab plan](https://github.com/TreyWright360/aws-cloud-operations-handbook/blob/main/load-balancing/alb-504.md).
 
 ---
 
 ## 📌 Executive Summary & Business Impact
-* **Business Challenge:** The organization required a resilient, zero-downtime infrastructure capable of absorbing sudden 10x traffic spikes while eliminating idle compute expenses during off-peak hours.
-* **Solution:** Designed and provisioned a fully decoupled, multi-AZ cloud architecture on AWS using modular **Terraform (IaC)**, protected by an automated **GitHub Actions CI/CD pipeline with health-check rollbacks**.
-* **Key Metric Results:**
-  * ⚡ **99.9% Uptime:** Sustained through Multi-AZ automated failover and Application Load Balancing.
-  * 💰 **40% Cost Reduction:** Achieved via target-tracking Auto Scaling policies (60% target CPU utilization).
-  * ⏱️ **8-Minute Automated Deployments:** Reduced manual provisioning time from 4+ hours to under 8 minutes with zero human configuration error.
+* **Design goal:** Provide a repeatable two-AZ web infrastructure lab for availability, scaling, and incident-response exercises.
+* **Implemented:** Modular Terraform for VPC, ALB, EC2 Auto Scaling, security groups, and optional Multi-AZ PostgreSQL RDS, plus a GitHub Actions validation and deployment workflow.
+* **Still to measure:** Availability during a controlled AZ exercise, response under load, deployment duration, and cost. The static Apache page does not connect to RDS, so database failover needs an application test path.
 
 ---
 
@@ -63,13 +62,11 @@
 
 ---
 
-## 🔄 Automated CI/CD Pipeline & Zero-Downtime Rollback Logic
+## 🔄 CI/CD Pipeline and Current Recovery Limit
 
-1. **Commit & Test:** Developer pushes code $\\rightarrow$ GitHub Actions runs unit tests, `tflint`, and `checkov` security scans.
-2. **Staged Rolling Deployment:** Deploys new application build gradually across target group instances.
-3. **Automated Health-Check Rollback:**
-   * The pipeline polls the ALB `/health` endpoint for HTTP 200 OK responses.
-   * If error rates exceed threshold or health checks fail, the pipeline **automatically cancels deployment and rolls back to the last stable state with zero end-user downtime**.
+1. On push and pull request, GitHub Actions runs `terraform fmt`, `terraform init -backend=false`, `terraform validate`, and a non-blocking `tfsec` scan.
+2. On a `main` push with AWS credentials configured, the workflow runs `terraform apply` and checks the ALB `/health` endpoint.
+3. A failed health check marks the job failed. **The workflow does not currently perform an automatic rollback or measure an error-rate threshold.** Rolling instance refresh is configured in the ASG module; an end-to-end deployment rollback still needs implementation and a lab test.
 
 ---
 
@@ -87,9 +84,9 @@
 
 ## 🛠️ Retrospective: What Broke & How I Fixed It (Failure Analysis)
 
-* **Incident:** During initial load testing, Auto Scaling instances entered an infinite termination and recreation loop.
-* **Root Cause:** The ALB health check grace period was configured to 30 seconds, while the application's startup bootstrap script required 75 seconds to initialize dependencies. The ALB marked healthy instances as "unresponsive" before initialization completed.
-* **Remediation:** Increased the `health_check_grace_period` to 300 seconds and implemented a dedicated, lightweight `/health` probe route in the application server.
+* **Scenario to test:** Auto Scaling replacement after a failing health check or slow bootstrap.
+* **Current code:** `health_check_grace_period = 300` and a lightweight `/health` file are present. The original failure timeline and measured startup duration are not checked in.
+* **Runbook:** [Auto Scaling replacement loop](https://github.com/TreyWright360/aws-cloud-operations-handbook/blob/main/compute/autoscaling-failures.md).
 
 ---
 
@@ -108,5 +105,5 @@ terraform init
 terraform plan -var-file="environments/dev.tfvars"
 
 # 3. Provision infrastructure
-terraform apply -var-file="environments/dev.tfvars" -auto-approve
+terraform apply -var-file="environments/dev.tfvars"
 ```
