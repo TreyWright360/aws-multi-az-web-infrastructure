@@ -7,6 +7,8 @@
 
 > **Portfolio evidence status:** Infrastructure code is published. No dated AWS failure-test results, uptime measurements, cost comparison, or deployment-duration measurements are checked into this repository yet. See the [AWS Cloud Operations Handbook](https://github.com/TreyWright360/aws-cloud-operations-handbook) for runbooks and the [ALB 504 lab plan](https://github.com/TreyWright360/aws-cloud-operations-handbook/blob/main/load-balancing/alb-504.md).
 
+For a recruiter-friendly summary of implementation, failure modes, evidence, and limits, see the [project case study](CASE-STUDY.md).
+
 ---
 
 ## 📌 Executive Summary & Business Impact
