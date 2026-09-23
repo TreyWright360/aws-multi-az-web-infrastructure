@@ -46,7 +46,8 @@ For a recruiter-friendly summary of implementation, failure modes, evidence, and
 
 ```text
 ├── .github/workflows/
-│   └── deploy.yml              # CI/CD pipeline (Lint -> Security Scan -> Gated Apply)
+│   ├── deploy.yml              # CI validation (Lint -> Security Scan -> Validate), runs on push/PR
+│   └── deploy-production.yml   # Manual, approval-gated Terraform apply to production
 ├── modules/
 │   ├── vpc/                    # VPC, Subnets, IGW, NAT Gateways, Route Tables
 │   ├── security/               # Least-Privilege Security Groups (ALB, App, DB)
@@ -66,8 +67,8 @@ For a recruiter-friendly summary of implementation, failure modes, evidence, and
 
 ## 🔄 CI/CD Pipeline and Current Recovery Limit
 
-1. On push and pull request, GitHub Actions runs `terraform fmt`, `terraform init -backend=false`, `terraform validate`, and a non-blocking `tfsec` scan.
-2. On a `main` push with AWS credentials configured, the workflow runs `terraform apply` and checks the ALB `/health` endpoint.
+1. On push and pull request, `deploy.yml` runs `terraform fmt`, `terraform init -backend=false`, `terraform validate`, and a non-blocking `tfsec` scan. This workflow never applies infrastructure — it only validates.
+2. Deploying to production is a separate, manual step: `deploy-production.yml` is triggered by hand (`workflow_dispatch`) and requires confirming a `DEPLOY` input plus approval on the `production` GitHub Environment before it will run `terraform apply` and check the ALB `/health` endpoint.
 3. A failed health check marks the job failed. **The workflow does not currently perform an automatic rollback or measure an error-rate threshold.** Rolling instance refresh is configured in the ASG module; an end-to-end deployment rollback still needs implementation and a lab test.
 
 ---
