@@ -1,6 +1,6 @@
 # Case study: multi-AZ web infrastructure
 
-**Portfolio status:** Code published; incident labs and performance claims are not yet supported by dated evidence.
+**Portfolio status:** PARTIALLY TESTED. Deployed live to AWS on 2026-09-23. Instance-replacement and NAT-dependency labs are verified with dated evidence; ALB 504 and full AZ-outage exercises remain undone.
 
 ## Business problem
 
@@ -23,7 +23,7 @@ The ALB forwards HTTP to EC2 targets and checks `/health`. The ASG uses ELB heal
 
 ## Test evidence and video
 
-**DOCUMENTATION ONLY.** No dated failure injection, recovery screenshots, measured RTO, uptime, load test, or video is checked in. The [handbook evidence rules](https://github.com/TreyWright360/aws-cloud-operations-handbook/blob/main/evidence/README.md) define the next lab record.
+**PARTIALLY TESTED.** [Dated evidence](https://github.com/TreyWright360/aws-cloud-operations-handbook/blob/main/evidence/multi-az-instance-replacement/INDEX.md) covers two labs: (1) terminating a healthy instance — zero user-visible downtime, 2m 8s to a healthy replacement; (2) removing the shared NAT gateway route to test the risk flagged below — this reproduced the documented Auto Scaling replacement loop for real (a replacement instance ran 6 minutes and was killed for failing its health check, with a second replacement booting into the same trap), then recovered in 2m 40s once the route was restored and the stuck instance was force-replaced. No load test, ALB 504 exercise, or video is checked in yet.
 
 ## Security and cost controls
 

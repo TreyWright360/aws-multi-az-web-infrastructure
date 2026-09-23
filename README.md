@@ -3,9 +3,9 @@
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
-![Evidence](https://img.shields.io/badge/Incident%20Labs-Documentation%20Only-yellow?style=for-the-badge)
+![Evidence](https://img.shields.io/badge/Incident%20Labs-Partially%20Tested-orange?style=for-the-badge)
 
-> **Portfolio evidence status:** Infrastructure code is published. No dated AWS failure-test results, uptime measurements, cost comparison, or deployment-duration measurements are checked into this repository yet. See the [AWS Cloud Operations Handbook](https://github.com/TreyWright360/aws-cloud-operations-handbook) for runbooks and the [ALB 504 lab plan](https://github.com/TreyWright360/aws-cloud-operations-handbook/blob/main/load-balancing/alb-504.md).
+> **Portfolio evidence status:** PARTIALLY TESTED. Deployed to a live AWS lab account on 2026-09-23. Two labs are verified end to end with dated evidence: [normal instance replacement](https://github.com/TreyWright360/aws-cloud-operations-handbook/blob/main/evidence/multi-az-instance-replacement/INDEX.md) (2m 8s recovery, zero user-visible downtime) and a **real architectural finding** — a single shared NAT gateway meant a replacement instance could never bootstrap, reproducing the documented Auto Scaling replacement loop on purpose, then fixed and re-verified. ALB 504 and full AZ-outage exercises are still pending. See the [AWS Cloud Operations Handbook](https://github.com/TreyWright360/aws-cloud-operations-handbook) for runbooks and the [ALB 504 lab plan](https://github.com/TreyWright360/aws-cloud-operations-handbook/blob/main/load-balancing/alb-504.md).
 
 For a recruiter-friendly summary of implementation, failure modes, evidence, and limits, see the [project case study](CASE-STUDY.md).
 
@@ -87,8 +87,10 @@ For a recruiter-friendly summary of implementation, failure modes, evidence, and
 
 ## 🛠️ Retrospective: What Broke & How I Fixed It (Failure Analysis)
 
-* **Scenario to test:** Auto Scaling replacement after a failing health check or slow bootstrap.
-* **Current code:** `health_check_grace_period = 300` and a lightweight `/health` file are present. The original failure timeline and measured startup duration are not checked in.
+* **What I tested:** terminated a healthy instance to watch a normal Auto Scaling replacement, then deliberately removed the shared NAT gateway route to see what actually happens when a replacement can't reach the internet.
+* **What broke:** both private subnets route through a single NAT gateway in one AZ. With that route removed, a replacement instance launched, couldn't `dnf install httpd`, never passed its health check, and was killed by the ASG after its 300s grace period — a real, reproduced Auto Scaling replacement loop, not a hypothetical one. A second replacement launched straight into the same trap before I intervened.
+* **How I fixed it (for the lab):** restored the NAT route and force-replaced the stuck instance; the next launch had a working network path and passed its health check in under 3 minutes. The permanent code fix — one NAT gateway and route table per AZ — is not yet in this repo's Terraform.
+* **Evidence:** full timeline, ASG activity log, and target-health data in the [instance replacement and NAT failure evidence](https://github.com/TreyWright360/aws-cloud-operations-handbook/blob/main/evidence/multi-az-instance-replacement/INDEX.md).
 * **Runbook:** [Auto Scaling replacement loop](https://github.com/TreyWright360/aws-cloud-operations-handbook/blob/main/compute/autoscaling-failures.md).
 
 ---
